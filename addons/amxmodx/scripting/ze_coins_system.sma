@@ -28,7 +28,6 @@ new const g_szTable[] =
 new g_iSaveType,
 	g_iMaxCoins,
 	g_iStartCoins,
-	g_iVaultHandle,
 	g_iDamageCoins,
 	g_iEscapeSuccess, 
 	g_iHumanInfected,
@@ -40,8 +39,11 @@ new g_iSaveType,
 // String.
 new g_szDataBaseInfo[DataBase]
 
-// MySQL
-new Handle:g_hTuple
+// MySQL handle.
+new Handle:g_hTuple = Empty_Handle
+
+// nVault handle.
+new g_iVaultHandle = INVALID_HANDLE
 
 // Forward allows register new natives.
 public plugin_natives()
