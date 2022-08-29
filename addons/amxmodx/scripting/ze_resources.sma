@@ -430,6 +430,16 @@ public plugin_precache()
 	}
 
 	// Get number of models in dynamic array.
+	iArrSize = ArraySize(g_szHumanModels)
+
+	for (iIndex = 0; iIndex < iArrSize; iIndex++)
+	{
+		ArrayGetString(g_szHumanModels, iIndex, szPlayerModel, charsmax(szPlayerModel))
+		formatex(szModelPath, charsmax(szModelPath), "models/player/%s/%s.mdl", szPlayerModel, szPlayerModel)
+		precache_model(szModelPath)
+	}
+
+	// Get number of models in dynamic array.
 	iArrSize = ArraySize(g_szOriginZombieModel)
 
 	for (iIndex = 0; iIndex < iArrSize; iIndex++)
