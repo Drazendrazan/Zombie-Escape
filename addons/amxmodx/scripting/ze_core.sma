@@ -35,7 +35,8 @@ enum _:COLORS
 }
 
 // Variables
-new g_iRoundTime,
+new g_iXVarId,
+	g_iRoundTime,
 	g_iHumansScore, 
 	g_iZombiesScore, 
 	g_iRoundNum,
@@ -67,7 +68,10 @@ new g_iRoundTime,
 	Float:g_flZombieSpeed,
 	Float:g_flHumanSpeedFactor,
 	Float:g_flRoundEndDelay
-	
+
+// Public Variable.
+public xvar_GameMode
+
 // Trie's.
 new Trie:g_tChosenPlayers
 
@@ -176,6 +180,9 @@ public plugin_init()
 
 	// Check Round Time to Terminate it
 	set_task(1.0, "Check_RoundTimeleft", ROUND_TIME_LEFT, _, _, "b")
+
+	// Default Values.
+	g_iXVarId = get_xvar_id("xvar_GameMode")
 }
 
 // Hook called when change the value in mp_freezetime.
@@ -547,7 +554,7 @@ public Check_AlivePlayers()
 		else
 		{
 			// Check game mode is started or not yet?
-			if (ze_pGameMode)
+			if (get_xvar_num(g_iXVarId))
 			{
 				// All Zombies disconnected from the server?
 				if (iHumansNum && !iZombiesNum)
@@ -981,6 +988,7 @@ public native_ze_set_zombie_speed(id, iSpeed)
 	
 	g_bZSpeedUsed[id] = true
 	g_iZSpeedSet[id] = iSpeed
+	rg_reset_maxspeed(id)
 	return true;
 }
 
@@ -993,6 +1001,7 @@ public native_ze_reset_zombie_speed(id)
 	}
 	
 	g_bZSpeedUsed[id] = false
+	rg_reset_maxspeed(id)
 	return true;
 }
 
