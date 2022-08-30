@@ -59,7 +59,7 @@ public fw_CmdStart_Post(id, pUC_handle)
 	get_entvar(id, var_velocity, vVelocity)
 
 	// Player not on ground or speed not enough?
-	if (!(get_entvar(id, var_flags) & FL_ONGROUND) && (vector_length(vVelocity) < 80))
+	if (!(get_entvar(id, var_flags) & FL_ONGROUND) || (vector_length(vVelocity) < 80))
 		return
 
 	if (g_bLeapUsed[id])
