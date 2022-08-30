@@ -10,7 +10,7 @@
 #include <zombie_escape_stocks>
 
 // Mod Information's.
-#define ZE_VERSION "1.7"
+#define ZE_VERSION "1.7 BugFix"
 #define AUTHORS "ZE Dev Team"
 #define ZE_HOMEURL "https://github.com/raheem-cs/Zombie-Escape"
 
