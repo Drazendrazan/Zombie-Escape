@@ -79,6 +79,10 @@ public ze_game_started_pre()
 	// We're used this in ze_game_started_pre(), Because if we put it in ze_gamestarted()
 	// When prevent the ze_game_started() forward from ze_game_started_pre(), The task is never removed.	
 	remove_task(TASK_MESSAGE)
+
+	// Reset Array's.
+	arrayset(g_iEscapeRank, 0, sizeof(g_iEscapeRank))
+	arrayset(g_flEscapePoints, 0.0, sizeof(g_flEscapePoints))
 }
 
 // Forward called after player humanized.
@@ -118,6 +122,7 @@ public ze_user_infected(iVictim, iInfector)
 	{
 		// Unset player glow rendering.
 		Set_Rendering(iVictim)
+		g_bGlowRendering[iVictim] = false
 	}
 
 	// Adding Infection icon on Victim Screen
@@ -127,9 +132,6 @@ public ze_user_infected(iVictim, iInfector)
 // Forward called when zombies appear.
 public ze_zombie_appear()
 {
-	// Reset Array.
-	arrayset(g_flEscapePoints, 0.0, sizeof g_flEscapePoints)
-
 	// New task for Show message for player (0.5s for reduce CPU usage).
 	set_task(0.5, "Show_Message", TASK_MESSAGE, "", 0, "b")
 }
