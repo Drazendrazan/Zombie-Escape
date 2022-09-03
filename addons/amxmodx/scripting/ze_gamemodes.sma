@@ -24,6 +24,7 @@ enum _:Colors
 }
 
 // Global Variables.
+new g_iXVarId
 new g_iGameCount
 new g_iCountdown
 new g_iSyncMsgHud
@@ -78,6 +79,9 @@ public plugin_init()
 	// Initialize dynamic array's.
 	g_aGameName = ArrayCreate(MAX_NAME_LENGTH)
 	g_aGameFile = ArrayCreate(64)
+
+	// Get XVar id.
+	g_iXVarId = get_xvar_id("xvar_GameMode")
 
 	// Static Values.
 	g_iDefaultGame = ZE_WRONG_GAME
@@ -200,7 +204,7 @@ public chooseGame()
 			
 			// Execute forward ze_gamemode_chosen(game_id).
 			g_iGameCurrent = iGame
-			ze_pGameMode = true // Has game started.
+			set_xvar_num(g_iXVarId, 1) // Has game started.
 			ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* No return value */, iGame)
 			return // Gamemode has started.
 		}
@@ -250,7 +254,7 @@ public chooseDefault()
 		ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, g_iDefaultGame)
 	
 		// Gamemode has started.
-		ze_pGameMode = true
+		set_xvar_num(g_iXVarId, 1)
 		g_iGameCurrent = g_iDefaultGame
 	}
 }
@@ -273,7 +277,7 @@ public pausePlugins()
 public ze_roundend(iWinTeam)
 {
 	// Round over.
-	ze_pGameMode = false
+	set_xvar_num(g_iXVarId, 0)
 	g_iGameCurrent = ZE_WRONG_GAME
 
 	// Remove task.
@@ -448,7 +452,7 @@ public native_gamemode_start(plugin_id, paras_num)
 	ExecuteForward(g_iForwards[FORWARD_GAMEMODE_CHOSEN], _/* Ignore return value */, iGame)
 
 	// Gamemode has started.
-	ze_pGameMode = true
+	set_xvar_num(g_iXVarId, 1)
 	g_iGameCurrent = iGame
 	return true
 }
