@@ -147,7 +147,10 @@ public plugin_init()
 	bind_pcvar_num(create_cvar("ze_infection_sound", "1"), g_bInfectionEnabled)
 	bind_pcvar_num(create_cvar("ze_coming_sound", "1"), g_bComingEnabled)
 	bind_pcvar_num(create_cvar("ze_wins_sound", "1"), g_bWinsEnabled)
-	bind_pcvar_num(get_cvar_pointer("ze_release_time"), g_iReleaseTime)
+	
+	new pCvarReleaseTime = get_cvar_pointer("ze_release_time") // Get id of the cvar.
+	
+	if (pCvarReleaseTime != 0) bind_pcvar_num(pCvarReleaseTime, g_iReleaseTime)
 
 	// Hook zombie knife
 	register_clcmd(ZOMBIE_CLAWS, "Hook_ZombieKnifeSelection")
