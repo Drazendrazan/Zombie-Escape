@@ -25,6 +25,7 @@ new Array:g_szCountDownSound
 // Variables
 new g_iCountDown
 
+// Forward allows precache game files.
 public plugin_precache()
 {
 	// Initialize arrays
@@ -62,23 +63,26 @@ public plugin_precache()
 	}
 }
 
+// Forward called after server activation.
 public plugin_init()
 {
 	register_plugin("[ZE] Sound Countdown", ZE_VERSION, AUTHORS)
 }
 
+// Forward called every new round, After game started.
 public ze_game_started()
 {
 	// Get gamemode delay
 	g_iCountDown = get_cvar_num("ze_gamemodes_delay") 
 	
+	// New task for countdown.
 	set_task(1.0, "Countdown_Start", TASK_COUNTDOWN, _, _, "b")
 }
 
 public Countdown_Start()
 {
 	// Check game mode has started or not yet?
-	if ((g_iCountDown - 1 < 0) || !ze_is_game_started() || ze_pGameMode)
+	if ((g_iCountDown - 1 < 0) || !ze_is_game_started())
 	{
 		remove_task(TASK_COUNTDOWN) // Remove the task
 		return // Block the execution of the blew code
@@ -95,8 +99,15 @@ public Countdown_Start()
 	g_iCountDown--
 }
 
+// Forward called when gamemode chosen.
+public ze_gamemode_chosen(game_id)
+{
+	// At gamemode chosen, remove countdown task to block interference next round.
+	remove_task(TASK_COUNTDOWN)
+}
+
 public ze_roundend(WinTeam)
 {
-	// At round end, remove countdown task to block interference next round
+	// At round end, remove countdown task to block interference next round.
 	remove_task(TASK_COUNTDOWN)
 }
