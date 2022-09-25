@@ -10,7 +10,7 @@
 #include <zombie_escape_stocks>
 
 // Mod Information's.
-#define ZE_VERSION "1.7 BugFix"
+#define ZE_VERSION "1.7.1"
 #define AUTHORS "ZE Dev Team"
 #define ZE_HOMEURL "https://github.com/raheem-cs/Zombie-Escape"
 
@@ -57,9 +57,6 @@ enum (+=1)
 // Used in ze_resource.sma
 const MAX_MODEL_LENGTH = 64
 const MAX_SOUND_LENGTH = 64
-
-// Public Variables.
-public pGameModeStatus = 0
 
 // Forwards
 
