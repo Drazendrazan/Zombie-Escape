@@ -17,8 +17,6 @@ enum _:TOTAL_FORWARDS
 	FORWARD_DISCONNECT
 }
 
-new g_iForwards[TOTAL_FORWARDS]
-
 // Tasks IDs
 enum
 {
@@ -53,6 +51,7 @@ new g_iXVarId,
 	g_iZombieGravity,
 	g_iRoundTimeLeft,
 	g_iPainShockFree,
+	g_iForwards[TOTAL_FORWARDS],
 	g_iHSpeedFactor[MAX_PLAYERS+1],
 	g_iZSpeedSet[MAX_PLAYERS+1],
 	g_iUserGravity[MAX_PLAYERS+1],
@@ -69,12 +68,10 @@ new g_iXVarId,
 	Float:g_flHumanSpeedFactor,
 	Float:g_flRoundEndDelay
 
-// Public Variable.
+// Public Variable (XVar).
 public xvar_GameMode
 
-// Trie's.
-new Trie:g_tChosenPlayers
-
+// Forward allows register new natives.
 public plugin_natives()
 {
 	register_native("ze_is_user_zombie", "native_ze_is_user_zombie", 1)
@@ -108,11 +105,13 @@ public plugin_natives()
 	register_native("ze_is_user_last_zombie", "native_is_user_last_zombie", 1)
 }
 
+// Forward called after server activation.
 public plugin_init()
 {
+	// Load plug-in.
 	register_plugin("[ZE] Core/Engine", ZE_VERSION, AUTHORS, ZE_HOMEURL, "Zombie Escape APIs")
 	
-	// Hook Chains
+	// Hook Chains.
 	RegisterHookChain(RG_CBasePlayer_TraceAttack, "Fw_TraceAttack_Pre", 0)
 	RegisterHookChain(RG_CBasePlayer_TakeDamage, "Fw_TakeDamage_Post", 1)
 	RegisterHookChain(RG_CBasePlayer_Spawn, "Fw_PlayerSpawn_Post", 1)
@@ -122,7 +121,7 @@ public plugin_init()
 	RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed, "Fw_RestMaxSpeed_Post", 1)
 	RegisterHookChain(RG_HandleMenu_ChooseTeam, "Fw_HandleMenu_ChooseTeam_Post", 1)
 	
-	// Events
+	// Events.
 	register_event("HLTV", "New_Round", "a", "1=0", "2=0")
 	register_event("TextMsg", "Map_Restart", "a", "2=#Game_Commencing", "2=#Game_will_restart_in", "2=#Round_Draw")
 	register_logevent("Round_Start", 2, "1=Round_Start")
@@ -175,7 +174,6 @@ public plugin_init()
 	// Hooks CVars.
 	hook_cvar_change(pCvar_iFreezeTime, "fw_CVarFreezeTime")
 	hook_cvar_change(pCvar_iRoundTime, "fw_CVarRoundTime")
-	hook_cvar_change(pCvar_flZombieSpeed, "fw_CvarMaxSpeed")
 	hook_cvar_change(pCvar_iReqPlayers, "fw_CVarReqPlayers")
 
 	// Check Round Time to Terminate it
@@ -185,26 +183,23 @@ public plugin_init()
 	g_iXVarId = get_xvar_id("xvar_GameMode")
 }
 
-// Hook called when change the value in mp_freezetime.
-public fw_CVarFreezeTime(pCvar, const szOldVal[], const szNewVal[]) {
+// Hook called when change the value in ze_freeze_time.
+public fw_CVarFreezeTime(pCvar, const szOldVal[], const szNewVal[])
+{
 	// Replace value in mp_freezetime.
 	set_cvar_string("mp_freezetime", szNewVal)
 }
 
-// Hook called when change the value in mp_roundtime.
-public fw_CVarRoundTime(pCvar, const szOldVal[], const szNewVal[]) {
+// Hook called when change the value in ze_round_time.
+public fw_CVarRoundTime(pCvar, const szOldVal[], const szNewVal[])
+{
 	// Replace value in mp_roundtime.
 	set_cvar_string("mp_roundtime", szNewVal)
 }
 
-// Hook called when change the value in ze_zombie_speed.
-public fw_CvarMaxSpeed(pCvar, const szOldVal[], const szNewVal[]) {
-	// Replace value in sv_maxspeed.
-	set_cvar_string("sv_maxspeed", szNewVal)	
-}
-
 // Hook called when change the value in ze_required_players.
-public fw_CVarReqPlayers(pCvar, const szOldVal[], const szNewVal[]) {
+public fw_CVarReqPlayers(pCvar, const szOldVal[], const szNewVal[])
+{
 	// Game not started yet?
 	if (g_bGameStarted)
 		set_task(0.1, "Check_AlivePlayers")
@@ -212,10 +207,11 @@ public fw_CVarReqPlayers(pCvar, const szOldVal[], const szNewVal[]) {
 		set_task(0.1, "Check_AllPlayersNumber")
 }
 
+// Forward called after init.
 public plugin_cfg()
 {
 	// Get our configiration file and Execute it
-	new szCfgDir[64]
+	new szCfgDir[32]
 	get_localinfo("amxx_configsdir", szCfgDir, charsmax(szCfgDir))
 	server_cmd("exec %s/zombie_escape.cfg", szCfgDir)
 	
@@ -224,12 +220,8 @@ public plugin_cfg()
 	formatex(szGameName, sizeof(szGameName), "Zombie Escape v%s", ZE_VERSION)
 	set_member_game(m_GameDesc, szGameName)
 	
-	// Set Version
-	register_cvar("ze_version", ZE_VERSION, FCVAR_SERVER|FCVAR_SPONLY)
-	set_cvar_string("ze_version", ZE_VERSION)
-	
-	// Create our Trie to store SteamIDs in.
-	g_tChosenPlayers = TrieCreate()
+	// Mod version.
+	set_pcvar_string(create_cvar("ze_version", ZE_VERSION, FCVAR_SERVER|FCVAR_SPONLY), ZE_VERSION)
 
 	// Delay before update value on game CVar's.
 	set_task(1.0, "delayUpdateCVar")
@@ -645,12 +637,6 @@ public Reset_Score_Message()
 	g_iHumansScore = 0
 	g_iZombiesScore = 0
 	g_iRoundNum = 0
-}
-
-public plugin_end()
-{
-	// Destroy Trie.
-	TrieDestroy(g_tChosenPlayers)
 }
 
 public Message_Teamscore()
