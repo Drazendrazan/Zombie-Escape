@@ -52,12 +52,10 @@ new g_iXVarId,
 	g_iRoundTimeLeft,
 	g_iPainShockFree,
 	g_iForwards[TOTAL_FORWARDS],
-	g_iHSpeedFactor[MAX_PLAYERS+1],
-	g_iZSpeedSet[MAX_PLAYERS+1],
 	g_iUserGravity[MAX_PLAYERS+1],
 	bool:g_bGameStarted, 
 	bool:g_bSkullGreenColor,
-	bool:g_bIsRoundEnding,
+	bool:g_bIsRoundEnded,
 	bool:g_bIsZombie[MAX_PLAYERS+1],  
 	bool:g_bHSpeedUsed[MAX_PLAYERS+1], 
 	bool:g_bZSpeedUsed[MAX_PLAYERS+1],
@@ -66,7 +64,9 @@ new g_iXVarId,
 	Float:g_flReferenceTime,
 	Float:g_flZombieSpeed,
 	Float:g_flHumanSpeedFactor,
-	Float:g_flRoundEndDelay
+	Float:g_flRoundEndDelay,
+	Float:g_flZSpeedSet[MAX_PLAYERS+1],
+	Float:g_flHSpeedFactor[MAX_PLAYERS+1]
 
 // Public Variable (XVar).
 public xvar_GameMode
@@ -88,7 +88,9 @@ public plugin_natives()
 
 	register_native("ze_set_human_speed_factor", "native_ze_set_human_speed_factor", 1)
 	register_native("ze_set_zombie_speed", "native_ze_set_zombie_speed", 1)
-	
+	register_native("ze_set_human_speed_factor_f", "NATIVE_set_human_speed_factor_f", 1)
+	register_native("ze_set_zombie_speed_f", "NATIVE_set_zombie_speed_f", 1)
+
 	register_native("ze_reset_human_speed", "native_ze_reset_human_speed", 1)
 	register_native("ze_reset_zombie_speed", "native_ze_reset_zombie_speed", 1)
 	
@@ -227,13 +229,14 @@ public plugin_cfg()
 	set_task(1.0, "delayUpdateCVar")
 }
 
-public delayUpdateCVar() {
-	// Replace CVars values.
+public delayUpdateCVar()
+{
+	// Replace cvars value.
 	set_cvar_num("mp_roundtime", g_iRoundTime)
 	set_cvar_num("mp_freezetime", g_iFreezeTime)
-	set_cvar_float("sv_maxspeed", g_flZombieSpeed)	
 }
 
+// Hook called after check map conditions.
 public Fw_CheckMapConditions_Post()
 {
 	// Block Game Commencing
@@ -249,8 +252,12 @@ public Fw_CheckMapConditions_Post()
 // Hook called after player killed.
 public Fw_PlayerKilled_Post(id)
 {
-	// Check last Player.
+	// Check last human and zombie.
 	checkLastPlayer()
+	
+	// Round has over?
+	if (g_bIsRoundEnded)
+		return; // Prevent check alive players.
 
 	// Nobody alive?
 	if (!GetAlivePlayersNum(CS_TEAM_T) && !GetAlivePlayersNum(CS_TEAM_CT))
@@ -265,48 +272,27 @@ public Fw_RestMaxSpeed_Post(id)
 {
 	// Player is not Alive?
 	if (!is_user_alive(id))
-		return HC_CONTINUE // Prevent execute rest of codes.
+		return; // Prevent execute rest of codes.
 
 	// Get a current maxspeed of player.
 	static Float:flMaxSpeed
 	get_entvar(id, var_maxspeed, flMaxSpeed)
 
-	// Player is Alive and not Frozen?
+	// Player is not frozen!
 	if (flMaxSpeed != 1.0)
 	{
-		// Player is Human?
+		// Player isn't Zombie?
 		if (!g_bIsZombie[id])
 		{		
-			// Check Human has custom speed factor?
-			if (g_bHSpeedUsed[id])
-			{
-				// Set New Human Speed Factor
-				set_entvar(id, var_maxspeed, flMaxSpeed + float(g_iHSpeedFactor[id]))
-				return HC_CONTINUE // Prevent execute rest of codes.
-			}
-				
-			// Set Human Speed Factor, native not used
-			set_entvar(id, var_maxspeed, (flMaxSpeed + g_flHumanSpeedFactor))
-			return HC_CONTINUE // Prevent execute rest of codes.
+			// Set this Human speed factor, from native or cvar.
+			set_entvar(id, var_maxspeed, !g_bHSpeedUsed[id] ? (flMaxSpeed + g_flHumanSpeedFactor) : (flMaxSpeed + g_flHSpeedFactor[id]))
 		}
-		else // Zombie.
+		else // Is Zombie.
 		{
-			// Check Zombie has custom Speed?
-			if (g_bZSpeedUsed[id])
-			{
-				// Set Zombie speed from native.
-				set_entvar(id, var_maxspeed, float(g_iZSpeedSet[id]))
-				return HC_CONTINUE // Prevent execute rest of codes.
-			}
-
-			// Set Zombie maxspeed from CVar.
-			set_entvar(id, var_maxspeed, g_flZombieSpeed)
-			return HC_CONTINUE // Prevent execute rest of codes.
+			// Set this Zombie new speed, from native or cvar.
+			set_entvar(id, var_maxspeed, !g_bZSpeedUsed[id] ? g_flZombieSpeed : g_flZSpeedSet[id])
 		}		
 	}
-	
-	// Prevent resetting player maxspeed.
-	return HC_SUPERCEDE
 }
 
 public Fw_PlayerSpawn_Post(id)
@@ -371,7 +357,7 @@ public New_Round()
 	ExecuteForward(g_iForwards[FORWARD_GAME_STARTED])
 	
 	// Round Starting
-	g_bIsRoundEnding = false
+	g_bIsRoundEnded = false
 }
 
 // Score Message Task
@@ -397,22 +383,22 @@ public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[
 {
 	// Invalid player?
 	if (iVictim == iAttacker || !is_user_connected(iVictim) || !is_user_connected(iAttacker))
-		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
+		return HC_CONTINUE; // Prevent execute rest of codes and continue Trace attack.
 	
 	// Attacker and Victim is in same teams? Skip code blew
 	if (get_user_team(iAttacker) == get_user_team(iVictim))
-		return HC_CONTINUE // Prevent execute rest of codes and continue Trace attack.
+		return HC_CONTINUE; // Prevent execute rest of codes and continue Trace attack.
 	
 	// Round has over?
-	if (g_bIsRoundEnding)
-		return HC_SUPERCEDE // Prevent executre rest of codes and prevent Trace attack.
+	if (g_bIsRoundEnded)
+		return HC_SUPERCEDE; // Prevent executre rest of codes and prevent Trace attack.
 
 	// Check attacker is Zombie?
 	if (g_bIsZombie[iAttacker])
 	{		
 		// If return FALSE in this function, Prevent Trace attack. 
 		if (!Set_User_Zombie(iVictim, iAttacker, flDamage))
-			return HC_SUPERCEDE // Prevent Trace attack.
+			return HC_SUPERCEDE; // Prevent Trace attack.
 		
 		// Check if this is Last Human
 		if (!GetAlivePlayersNum(CS_TEAM_CT))
@@ -422,7 +408,7 @@ public Fw_TraceAttack_Pre(iVictim, iAttacker, Float:flDamage, Float:flDirection[
 		}
 	}
 
-	return HC_CONTINUE // Continue Trace attack.
+	return HC_CONTINUE; // Continue Trace attack.
 }
 
 public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDamageType)
@@ -448,7 +434,7 @@ public Fw_TakeDamage_Post(iVictim, iInflictor, iAttacker, Float:flDamage, bitsDa
 public Round_End()
 {
 	// Check round is already ended?
-	if (g_bIsRoundEnding || !g_bGameStarted)
+	if (g_bIsRoundEnded || !g_bGameStarted)
 		return // Prevent execute rest of codes.
 
 	// Get the number of alive players (Humans and Zombies)
@@ -486,7 +472,7 @@ public Round_Start()
 public Check_RoundTimeleft()
 {
 	// Round has over?
-	if (g_bIsRoundEnding)
+	if (g_bIsRoundEnded)
 		return // Prevent execute rest of codes.
 
 	// Get round time left.
@@ -798,7 +784,7 @@ Set_User_Zombie(id, iAttacker = 0, Float:flDamage = 0.0)
 finish_Round(iTeam)
 {
 	// Round over.
-	g_bIsRoundEnding = true
+	g_bIsRoundEnded = true
 
 	// Choose team:
 	switch (iTeam)
@@ -939,56 +925,122 @@ public native_ze_get_zombies_number()
 
 public native_ze_set_human_speed_factor(id, iFactor)
 {
+	// Player not connected?
 	if (!is_user_connected(id))
 	{
+		// Print colored message on chat with details.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false;
+		return 0; // Return false.
 	}
 	
+	// Enable custom Human speed for this player.
 	g_bHSpeedUsed[id] = true
-	g_iHSpeedFactor[id] = iFactor
+
+	// Store speed factor on new buffer to set it from forward.
+	g_flHSpeedFactor[id] = float(iFactor)
+
+	// Rest maxspeed to activate new maxspeed.
 	rg_reset_maxspeed(id)
-	return true;
+	return 1; // Return true.
 }
 
 public native_ze_reset_human_speed(id)
 {
+	// Player not connected?
 	if (!is_user_connected(id))
 	{
+		// Print error on server console with details.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false;
+		return 0; // Return false.
 	}
 	
+	// Disable custom Zombie speed for this player.
 	g_bHSpeedUsed[id] = false
+
+	// Reset maxspeed to set default maxspeed.
 	rg_reset_maxspeed(id)
-	return true;
+	return 1; // Return true.
 }
 
 public native_ze_set_zombie_speed(id, iSpeed)
 {
+	// Player not connected?
 	if (!is_user_connected(id))
 	{
+		// Print error on serve console with details.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false;
+		return 0; // Return false.
 	}
 	
+	// Enable custom maxspeed for this player.
 	g_bZSpeedUsed[id] = true
-	g_iZSpeedSet[id] = iSpeed
+
+	// Store maxspeed on new buffer.
+	g_flZSpeedSet[id] = float(iSpeed)
+
+	// Reset that to activate new maxspeed for this player.
 	rg_reset_maxspeed(id)
-	return true;
+	return 1; // Return true.
+}
+
+public NATIVE_set_human_speed_factor_f(id, Float:flFactor)
+{
+	// Player not connected?
+	if (!is_user_connected(id))
+	{
+		// Print error on server console with details.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
+		return 0; // Return false.
+	}
+
+	// Enable custom maxspeed for this player.
+	g_bHSpeedUsed[id] = true
+
+	// Store maxspeed on new buffer.
+	g_flHSpeedFactor[id] = flFactor
+
+	// Reset that to activate new maxspeed for this player.
+	rg_reset_maxspeed(id)
+	return 1; // Return true.
+}
+
+public NATIVE_set_zombie_speed_f(id, Float:flSpeed)
+{
+	// Player not connected?
+	if (!is_user_connected(id))
+	{
+		// Print error on serve console with details.
+		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
+		return 0; // Return false.
+	}
+	
+	// Enable custom maxspeed for this player.
+	g_bZSpeedUsed[id] = true
+
+	// Store maxspeed on new buffer.
+	g_flZSpeedSet[id] = flSpeed
+
+	// Reset that to activate new maxspeed for this player.
+	rg_reset_maxspeed(id)
+	return 1; // Return true.
 }
 
 public native_ze_reset_zombie_speed(id)
 {
+	// Player not connected?
 	if (!is_user_connected(id))
 	{
+		// Print error on server console with details.
 		log_error(AMX_ERR_NATIVE, "[ZE] Invalid Player id (%d)", id)
-		return false;
+		return 0; // Return false.
 	}
 	
+	// Disable custom maxspeed for this player.
 	g_bZSpeedUsed[id] = false
+
+	// Reset maxspeed to set default speed for this player.
 	rg_reset_maxspeed(id)
-	return true;
+	return 1; // Return true.
 }
 
 public native_ze_set_user_gravity(id, iGravity)
